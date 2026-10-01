@@ -1,4 +1,5 @@
 import './styles/main.css';
+import './styles/refinement.css';
 import translations from './i18n/translations.js';
 
 const base = import.meta.env.BASE_URL;
@@ -20,11 +21,47 @@ app.innerHTML = `
   <section class="contact section" id="contact"><p class="eyebrow reveal">ALMARA / VENICE</p><h2 class="reveal" data-i18n="journey"></h2><div class="contact-grid">${[['whatsapp','WhatsApp','https://wa.me/XXXXXXXXXXX'],['instagram','Instagram','https://instagram.com/USERNAME'],['email','Email','mailto:EMAIL@example.com']].map(([icon,name,url])=>`<a class="contact-card reveal" href="${url}" target="_blank" rel="noreferrer"><img src="${asset(`icons/${icon}.png`)}" alt=""><span>${name}</span><b>↗</b></a>`).join('')}</div></section></main>
   <footer><img src="${asset('logo/logo-almara.png')}" alt="ALMARA"><span data-i18n="footer"></span><span>© ${new Date().getFullYear()} ALMARA</span></footer><div class="mobile-menu"><div class="mobile-links">${[0,1,2,3].map((n)=>`<a href="#${['experience','services','venice','contact'][n]}" data-nav="${n}"></a>`).join('')}</div><div class="mobile-languages">${languages.map(([code,label])=>`<button data-language="${code}">${flag(code)} ${label}</button>`).join('')}</div></div>`;
 
-function flag(code) { return `<i class="nation-flag nation-${code}" aria-hidden="true"></i>`; }
+function flag(code) {
+  const unionJack = code === 'en' ? `<svg viewBox="0 0 60 30" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="#012169" d="M0 0h60v30H0z"/><path stroke="#fff" stroke-width="6" d="m0 0 60 30M60 0 0 30"/><path fill="#c8102e" d="M0 0v2.24L25.53 15H30zM60 0h-4.47L30 12.76V15zM60 30v-2.24L34.47 15H30zM0 30h4.47L30 17.24V15z"/><path stroke="#fff" stroke-width="10" d="M30 0v30M0 15h60"/><path stroke="#c8102e" stroke-width="6" d="M30 0v30M0 15h60"/></svg>` : '';
+  return `<i class="nation-flag nation-${code}" aria-hidden="true">${unionJack}</i>`;
+}
 function translate() { const t=translations[language]; document.documentElement.lang=language; document.title=`ALMARA — ${t.eyebrow}`; document.querySelector('meta[name="description"]').content=t.subtitle; document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t[el.dataset.i18n]); document.querySelectorAll('[data-nav]').forEach(el=>el.textContent=t.nav[el.dataset.nav]); document.querySelectorAll('[data-description]').forEach(el=>el.textContent=t.descriptions[el.dataset.description]); document.querySelectorAll('[data-service]').forEach((el,i)=>el.textContent= serviceNames[i]); const current=document.querySelector('.language-current'); current.querySelector('.flag').innerHTML=flag(language); current.querySelector('b').textContent=language.toUpperCase(); }
+const routeCopy=document.querySelector('.tradition-copy');
+routeCopy.querySelector('.eyebrow').dataset.i18n='routeLabel';
+routeCopy.querySelector('p:last-child').dataset.i18n='routeCopy';
+document.querySelectorAll('.text-link').forEach(el=>{el.innerHTML='<span data-i18n="more"></span> <b aria-hidden="true">→</b>'});
+document.querySelector('.scroll-cue').innerHTML='<span></span><small data-i18n="scroll"></small>';
 translate();
-document.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',()=>{language=button.dataset.language; localStorage.setItem('almara-language',language); translate(); document.querySelector('.language').classList.remove('open');}));
+function translateServiceNames() {
+  document.querySelectorAll('[data-service]').forEach((el,i)=>el.textContent=translations[language].names[i]);
+  document.querySelectorAll('.service-visual img').forEach((el,i)=>el.alt=translations[language].names[i]);
+}
+translateServiceNames();
+document.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',()=>{language=button.dataset.language; localStorage.setItem('almara-language',language); translate(); translateServiceNames(); document.querySelector('.language').classList.remove('open'); document.querySelector('.language-current').setAttribute('aria-expanded','false');}));
 document.querySelector('.language-current').addEventListener('click',()=>document.querySelector('.language').classList.toggle('open'));
 const menu=document.querySelector('.menu-button'); menu.addEventListener('click',()=>{const active=document.body.classList.toggle('menu-open');menu.setAttribute('aria-expanded',active);}); document.querySelectorAll('.mobile-menu a').forEach(a=>a.addEventListener('click',()=>{document.body.classList.remove('menu-open');menu.setAttribute('aria-expanded','false')}));
-const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting) entry.target.classList.add('shown')}),{threshold:.16}); document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
-let ticking=false; addEventListener('scroll',()=>{if(ticking)return;ticking=true;requestAnimationFrame(()=>{const y=scrollY, h=innerHeight;document.querySelector('#nav').classList.toggle('scrolled',y>35);document.documentElement.style.setProperty('--scroll',Math.min(y/h,1));ticking=false})},{passive:true});
+const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting) { entry.target.classList.add('shown'); observer.unobserve(entry.target); }}),{threshold:.08}); document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+document.querySelector('.hero').insertAdjacentHTML('afterbegin','<div class="ambient-glow" aria-hidden="true"></div>');
+const motion = matchMedia('(prefers-reduced-motion: reduce)');
+const photos = [...document.querySelectorAll('.service-visual, .tradition-image, .immersive')];
+let ticking=false;
+function updateMotion() {
+  const y=scrollY, h=innerHeight;
+  document.querySelector('#nav').classList.toggle('scrolled',y>35);
+  document.documentElement.style.setProperty('--scroll',motion.matches ? 0 : Math.min(y/h,1));
+  if (!motion.matches) photos.forEach(el=>{
+    const rect=el.getBoundingClientRect();
+    if (rect.bottom < 0 || rect.top > h) return;
+    const progress=(h/2 - rect.top - rect.height/2)/h;
+    el.style.setProperty('--photo-shift',`${Math.max(-9,Math.min(9,progress*18))}px`);
+    el.style.setProperty('--scene-shift',`${Math.max(-22,Math.min(22,progress*35))}px`);
+  });
+  ticking=false;
+}
+addEventListener('scroll',()=>{if(!ticking){ticking=true;requestAnimationFrame(updateMotion)}},{passive:true});
+addEventListener('resize',updateMotion); updateMotion();
+const languageButton=document.querySelector('.language-current');
+const syncLanguageExpanded=()=>languageButton.setAttribute('aria-expanded',document.querySelector('.language').classList.contains('open'));
+languageButton.addEventListener('click',syncLanguageExpanded);
+document.addEventListener('click',e=>{if(!e.target.closest('.language')){document.querySelector('.language').classList.remove('open');syncLanguageExpanded()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.body.classList.remove('menu-open');menu.setAttribute('aria-expanded','false');document.querySelector('.language').classList.remove('open');syncLanguageExpanded()}});

@@ -22,4 +22,4 @@ The production build is written to `dist/`.
 
 ## GitHub Pages
 
-Pushing to `main` runs `.github/workflows/deploy.yml`. Enable **GitHub Pages → Source: GitHub Actions** in the repository settings. The Vite configuration builds with `/almara/` as the base path in GitHub Actions. If the repository is renamed, update `vite.config.js`; a custom domain can use `/` by changing that same base setting.
+Pushing to `main` runs `.github/workflows/deploy.yml`. Enable **GitHub Pages → Source: GitHub Actions** in the repository settings. Vite automatically derives the base path from `GITHUB_REPOSITORY` in CI, including after a repository rename. For a custom domain, set `VITE_BASE_PATH=/` in the build environment.
