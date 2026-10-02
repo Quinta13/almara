@@ -22,7 +22,7 @@ html { scroll-padding-top: 100px; }
 .eyebrow { font-size: 12px; letter-spacing: .17em; line-height: 1.7; }
 .hero-copy { font-size: 17px; line-height: 1.75; max-width: 440px; }
 .button { font-size: 12px; min-height: 50px; display: inline-flex; align-items: center; justify-content: center; padding: 16px 24px; }
-.mask { width: clamp(210px, 25vw, 380px); height: 84%; top: 9%; object-fit: fill; }
+.mask { width: auto; height: 84%; top: 9%; max-width: none; object-fit: contain; }
 .mask-left { left: 0; }
 .mask-right { right: 0; }
 @keyframes mask-in { from { opacity: 0; transform: translateX(-100%); } to { opacity: .86; transform: translateY(calc(var(--scroll) * 16px)); } }
@@ -77,9 +77,9 @@ footer { font-size: 12px; }
   .hero h1 { font-size: clamp(38px, 10vw, 48px); line-height: 1.08; }
   .hero-copy { font-size: 16px; margin: 24px auto; }
   .hero .eyebrow { font-size: 11px; letter-spacing: .12em; }
-  .mask { width: 94px; height: 420px; top: 16%; opacity: .45 !important; }
-  .mask-left { left: -47px; }
-  .mask-right { right: -47px; }
+  .mask { width: auto; height: 70%; top: 15%; opacity: .45 !important; }
+  .mask-left { left: -40px; }
+  .mask-right { right: -40px; }
   .hero-actions { max-width: 265px; width: 100%; }
   .section { padding: 85px 24px; }
   .experience { min-height: 610px; padding-top: 130px; padding-bottom: 120px; }
