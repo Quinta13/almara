@@ -1,5 +1,7 @@
 import './styles/main.css';
 import './styles/refinement.css';
+import './styles/sections.css';
+import { setupExperiencePages } from './experience-pages.js';
 import translations from './i18n/translations.js';
 
 const base = import.meta.env.BASE_URL;
@@ -17,7 +19,7 @@ app.innerHTML = `
   <section class="experience section" id="experience"><div class="chapter">01 <span></span> ALMARA</div><div class="experience-copy"><p class="display reveal" data-i18n="experience"></p><p class="display gold-text reveal" data-i18n="authentic"></p></div><div class="ornament reveal">✦</div></section>
   <section class="services section" id="services"><div class="section-heading reveal"><p class="eyebrow">ALMARA / 02</p><h2 data-i18n="services"></h2></div><div class="service-list">${serviceNames.map((name,i)=>`<article class="service reveal"><div class="service-visual s${i}"><img src="${asset(`images/experience${i + 1}.png`)}" alt="${name}"><span>${String(i+1).padStart(2,'0')}</span></div><div class="service-info"><p class="service-no">0${i+1}</p><h3 data-service="${i}">${name}</h3><p data-description="${i}"></p><a href="#contact" class="text-link">DISCOVER <b>→</b></a></div></article>`).join('')}</div></section>
   <section class="immersive" id="venice"><div class="immersive-photo" style="--immersion:url('${asset('images/experience5.png')}')"></div><div class="water-light"></div><div class="immersive-content"><p class="eyebrow">VENICE / ALMARA</p><h2 class="reveal" data-i18n="immersive"></h2></div></section>
-  <section class="tradition section"><div class="tradition-image reveal"><img src="${asset('images/experience6.png')}" alt="Venice by gondola"><span>03</span></div><div class="tradition-copy"><p class="eyebrow">THE ART OF THE ROUTE</p><h2 class="reveal" data-i18n="tradition"></h2><div class="rule reveal"></div><p class="reveal">Every detail is considered: the silence of a narrow canal, the changing light on water, the city revealing itself only at its own pace.</p></div></section>
+  <section class="tradition section"><div class="tradition-image reveal"><img src="${asset('images/experience6.png')}" alt="Venice by gondola"></div><div class="tradition-copy"><p class="eyebrow">THE ART OF THE ROUTE</p><h2 class="reveal" data-i18n="tradition"></h2><div class="rule reveal"></div><p class="reveal">Every detail is considered: the silence of a narrow canal, the changing light on water, the city revealing itself only at its own pace.</p></div></section>
   <section class="contact section" id="contact"><p class="eyebrow reveal">ALMARA / VENICE</p><h2 class="reveal" data-i18n="journey"></h2><div class="contact-grid">${[['whatsapp','WhatsApp','https://wa.me/XXXXXXXXXXX'],['instagram','Instagram','https://instagram.com/USERNAME'],['email','Email','mailto:EMAIL@example.com']].map(([icon,name,url])=>`<a class="contact-card reveal" href="${url}" target="_blank" rel="noreferrer"><img src="${asset(`icons/${icon}.png`)}" alt=""><span>${name}</span><b>↗</b></a>`).join('')}</div></section></main>
   <footer><img src="${asset('logo/logo-almara.png')}" alt="ALMARA"><span data-i18n="footer"></span><span>© ${new Date().getFullYear()} ALMARA</span></footer><div class="mobile-menu"><div class="mobile-links">${[0,1,2,3].map((n)=>`<a href="#${['experience','services','venice','contact'][n]}" data-nav="${n}"></a>`).join('')}</div><div class="mobile-languages">${languages.map(([code,label])=>`<button data-language="${code}">${flag(code)} ${label}</button>`).join('')}</div></div>`;
 
@@ -37,19 +39,62 @@ function translateServiceNames() {
   document.querySelectorAll('.service-visual img').forEach((el,i)=>el.alt=translations[language].names[i]);
 }
 translateServiceNames();
-document.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',()=>{language=button.dataset.language; localStorage.setItem('almara-language',language); translate(); translateServiceNames(); document.querySelector('.language').classList.remove('open'); document.querySelector('.language-current').setAttribute('aria-expanded','false');}));
+let changingLanguage = false;
+function languageTextSpans() {
+  const elements = document.querySelectorAll('[data-i18n], [data-nav], [data-description], [data-service], .detail-back, .detail-page h1, .detail-description, .detail-page .button');
+  const spans = [];
+  elements.forEach(el => {
+    if (!el.getClientRects().length) return;
+    [...el.childNodes].forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+        const span = document.createElement('span');
+        span.className = 'language-text';
+        node.replaceWith(span); span.append(node);
+      }
+    });
+    spans.push(...el.querySelectorAll(':scope > .language-text'));
+  });
+  return [...new Set(spans)];
+}
+document.querySelectorAll('[data-language]').forEach(button=>button.addEventListener('click',async()=>{
+  const nextLanguage = button.dataset.language;
+  if (nextLanguage === language || changingLanguage) return;
+  document.querySelector('.language').classList.remove('open');
+  document.querySelector('.language-current').setAttribute('aria-expanded','false');
+  const update = () => {
+    language=nextLanguage;
+    localStorage.setItem('almara-language',language);
+    translate(); translateServiceNames();
+    document.dispatchEvent(new Event('almara-language-change'));
+  };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { update(); return; }
+  changingLanguage = true;
+  const animations = [];
+  try {
+    const outgoing = languageTextSpans().map(el => el.animate([{opacity:1,filter:'blur(0px)'},{opacity:0,filter:'blur(2px)'}], {duration:160,fill:'forwards',easing:'ease-in'}));
+    animations.push(...outgoing);
+    await Promise.all(outgoing.map(animation=>animation.finished));
+    update();
+    outgoing.forEach(animation=>animation.cancel());
+    const incoming = languageTextSpans().map((el,i) => el.animate([{opacity:0,filter:'blur(2px)'},{opacity:1,filter:'blur(0px)'}], {duration:300,delay:Math.min(i*12,72),fill:'both',easing:'ease-out'}));
+    animations.push(...incoming);
+    await Promise.all(incoming.map(animation=>animation.finished));
+  } finally {
+    animations.forEach(animation=>animation.cancel());
+    changingLanguage = false;
+  }
+}));
 document.querySelector('.language-current').addEventListener('click',()=>document.querySelector('.language').classList.toggle('open'));
 const menu=document.querySelector('.menu-button'); menu.addEventListener('click',()=>{const active=document.body.classList.toggle('menu-open');menu.setAttribute('aria-expanded',active);}); document.querySelectorAll('.mobile-menu a').forEach(a=>a.addEventListener('click',()=>{document.body.classList.remove('menu-open');menu.setAttribute('aria-expanded','false')}));
 const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting) { entry.target.classList.add('shown'); observer.unobserve(entry.target); }}),{threshold:.08}); document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
 document.querySelector('.hero').insertAdjacentHTML('afterbegin','<div class="ambient-glow" aria-hidden="true"></div>');
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
-const photos = [...document.querySelectorAll('.service-visual, .tradition-image, .immersive')];
 let ticking=false;
 function updateMotion() {
   const y=scrollY, h=innerHeight;
   document.querySelector('#nav').classList.toggle('scrolled',y>35);
   document.documentElement.style.setProperty('--scroll',motion.matches ? 0 : Math.min(y/h,1));
-  if (!motion.matches) photos.forEach(el=>{
+  if (!motion.matches) document.querySelectorAll('.service-visual, .tradition-image, .immersive').forEach(el=>{
     const rect=el.getBoundingClientRect();
     if (rect.bottom < 0 || rect.top > h) return;
     const progress=(h/2 - rect.top - rect.height/2)/h;
@@ -60,6 +105,12 @@ function updateMotion() {
 }
 addEventListener('scroll',()=>{if(!ticking){ticking=true;requestAnimationFrame(updateMotion)}},{passive:true});
 addEventListener('resize',updateMotion); updateMotion();
+const heroSection = document.querySelector('.hero');
+const maskObserver = new IntersectionObserver(entries => {
+  heroSection.classList.toggle('masks-visible', entries[0].intersectionRatio > .8);
+}, { threshold: [0, .8, 1] });
+setTimeout(() => maskObserver.observe(heroSection), motion.matches ? 0 : 1100);
+setupExperiencePages({ translations, getLanguage: () => language, asset });
 const languageButton=document.querySelector('.language-current');
 const syncLanguageExpanded=()=>languageButton.setAttribute('aria-expanded',document.querySelector('.language').classList.contains('open'));
 languageButton.addEventListener('click',syncLanguageExpanded);
